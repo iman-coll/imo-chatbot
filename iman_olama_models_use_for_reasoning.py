@@ -44,6 +44,16 @@ GROQ_MODELS = [
 
 OLLAMA_MODELS = ["phi3:mini", "gemma:2b", "tinyllama", "moondream"]
 
+# The 4 models below are Ollama models that Groq doesn't host by those exact
+# names. In the cloud they are served by the closest Groq-hosted open model so
+# the app keeps working with no local server (Groq's free tier is stable).
+GROQ_EQUIVALENTS = {
+    "phi3:mini": "llama-3.1-8b-instant",
+    "gemma:2b": "llama-3.3-70b-versatile",
+    "tinyllama": "llama-3.1-8b-instant",
+    "moondream": "groq/compound-mini",
+}
+
 ## prompt template
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -69,7 +79,24 @@ output_parser = StrOutputParser()
 
 def generate_response(question, provider, model, temperature, max_tokens):
     try:
-        if provider == PROVIDER_GROQ:
+        # Ollama-only models picked in the cloud are served by the closest
+        # Groq-hosted open model with the same role/size intent.
+        if provider == PROVIDER_GROQ and model in GROQ_EQUIVALENTS:
+            if not GROQ_API_KEY:
+                return (
+                    "Groq API key is missing. Add it locally in the `.env` file as "
+                    "`GROQ_API=...`, or in Streamlit Cloud go to Settings > Secrets and add "
+                    "`GROQ_API = \"...\"`."
+                )
+            from langchain_groq import ChatGroq
+
+            llm = ChatGroq(
+                model=GROQ_EQUIVALENTS[model],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_key=GROQ_API_KEY,
+            )
+        elif provider == PROVIDER_GROQ:
             if not GROQ_API_KEY:
                 return (
                     "Groq API key is missing. Add it locally in the `.env` file as "
@@ -98,9 +125,9 @@ def generate_response(question, provider, model, temperature, max_tokens):
     except Exception as exc:
         if provider == PROVIDER_GROQ and "does not exist" in str(exc).lower():
             return (
-                f"The Groq API doesn't host `{model}` (it's an Ollama model). "
-                "Either pick a Groq model from the list, or switch the provider "
-                "to 'Ollama (local server)' and make sure Ollama is running."
+                f"`{model}` isn't available on the selected cloud provider. "
+                "Try another model from the list, or switch to the Ollama provider "
+                "if you're running the app locally."
             )
         return f"Something went wrong: {exc}"
 
@@ -116,8 +143,18 @@ provider = st.sidebar.selectbox(
 )
 if provider == PROVIDER_GROQ:
     model = st.sidebar.selectbox("Select Groq Model", GROQ_MODELS)
-    status = "Groq API key configured." if GROQ_API_KEY else "Groq API key is NOT set."
-    st.sidebar.info(status)
+    if model in GROQ_EQUIVALENTS:
+        st.sidebar.info(
+            f"`{model}` is a local Ollama model; in the cloud it's served by "
+            f"Groq's `{GROQ_EQUIVALENTS[model]}` so it works automatically."
+        )
+    else:
+        status = (
+            "Groq API key configured."
+            if GROQ_API_KEY
+            else "Groq API key is NOT set."
+        )
+        st.sidebar.info(status)
 else:
     model = st.sidebar.selectbox("Select Local Ollama Model", OLLAMA_MODELS)
     st.sidebar.warning(
