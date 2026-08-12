@@ -36,6 +36,10 @@ GROQ_MODELS = [
     "llama-3.1-8b-instant",
     "openai/gpt-oss-120b",
     "qwen/qwen3.6-27b",
+    "phi3:mini",
+    "gemma:2b",
+    "tinyllama",
+    "moondream",
 ]
 
 OLLAMA_MODELS = ["phi3:mini", "gemma:2b", "tinyllama", "moondream"]
@@ -92,6 +96,12 @@ def generate_response(question, provider, model, temperature, max_tokens):
         chain = prompt | llm | output_parser
         return chain.invoke({"question": question})
     except Exception as exc:
+        if provider == PROVIDER_GROQ and "does not exist" in str(exc).lower():
+            return (
+                f"The Groq API doesn't host `{model}` (it's an Ollama model). "
+                "Either pick a Groq model from the list, or switch the provider "
+                "to 'Ollama (local server)' and make sure Ollama is running."
+            )
         return f"Something went wrong: {exc}"
 
 
