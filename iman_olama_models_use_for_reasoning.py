@@ -38,7 +38,7 @@ GROQ_MODELS = [
     "qwen/qwen3.6-27b",
 ]
 
-OLLAMA_MODELS = ["phi3:mini", "gemma:2b", "moondream", "tinyllama"]
+OLLAMA_MODELS = ["phi3:mini", "gemma:2b", "tinyllama", "moondream"]
 
 ## prompt template
 prompt = ChatPromptTemplate.from_messages(
@@ -96,7 +96,7 @@ def generate_response(question, provider, model, temperature, max_tokens):
 
 
 ## Title of the app
-st.title("Iman's Chatbot - Groq & Ollama Models")
+st.title("🤖 Iman Your Personal AI 🍓🌠")
 
 ## Sidebar settings
 st.sidebar.header("Model Settings")
@@ -123,7 +123,7 @@ max_tokens = st.sidebar.slider(
 )
 
 ## Main interface for using input
-st.write("I'm curious! What wonders do you have for me today? Ask away!")
+st.write("🌈 I'm curious! What wonders do you have for me today? 🤔 Ask away! 🌟")
 user_input = st.text_input("You: ")
 
 if user_input:
